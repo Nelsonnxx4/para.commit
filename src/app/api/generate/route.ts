@@ -1,7 +1,7 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import Groq from "groq-sdk";
 import { NextRequest, NextResponse } from "next/server";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 export async function POST(req: NextRequest) {
   const { category, topic, scope, context, breaking } = await req.json();
@@ -38,27 +38,22 @@ Respond ONLY with valid JSON, no markdown fences, no extra text:
 }`;
 
   try {
-    const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
-      generationConfig: {
-        responseMimeType: "application/json",
-        maxOutputTokens: 1024,
-        temperature: 0.7,
-      },
+    const response = await groq.chat.completions.create({
+      model: "llama-3.1-8b-instant",
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 1024,
+      temperature: 0.7,
+      response_format: { type: "json_object" },
     });
 
-    const result = await model.generateContent(prompt);
-    const raw = result.response.text();
-    const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim());
+    const raw = response.choices[0].message.content || "";
+    const parsed = JSON.parse(raw);
 
     return NextResponse.json(parsed);
-  } catch (error) {
-    console.error("Gemini API error:", error);
+  } catch (error: any) {
+    console.error("Groq API error:", error);
     return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : "Failed to generate",
-        details: error?.toString(),
-      },
+      { error: error?.message || "Failed to generate commit messages." },
       { status: 500 }
     );
   }
