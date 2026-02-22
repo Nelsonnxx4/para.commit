@@ -18,13 +18,23 @@ interface Props {
 }
 
 export default function CommitForm({ onResults }: Props) {
-  const [category, setCategory] = useState<CommitCategory>("feat");
+  const [categories, setCategories] = useState<CommitCategory[]>(["feat"]);
   const [topic, setTopic] = useState<string>("");
   const [scope, setScope] = useState<string>("");
   const [context, setContext] = useState<string>("");
   const [breaking, setBreaking] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+
+  const toggleCategory = (c: CommitCategory) => {
+    setCategories((prev) =>
+      prev.includes(c)
+        ? prev.length === 1
+          ? prev
+          : prev.filter((x) => x !== c)
+        : [...prev, c]
+    );
+  };
 
   const generate = async () => {
     if (!topic.trim()) return;
@@ -35,7 +45,13 @@ export default function CommitForm({ onResults }: Props) {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ category, topic, scope, context, breaking }),
+        body: JSON.stringify({
+          category: categories.join(","),
+          topic,
+          scope,
+          context,
+          breaking,
+        }),
       });
 
       const data = await res.json();
@@ -52,25 +68,44 @@ export default function CommitForm({ onResults }: Props) {
     <div className="flex flex-col gap-6">
       {/* Category selector */}
       <div>
-        <label className="text-xs text-zinc-500 uppercase tracking-widest mb-2 block">
-          Commit Type
-        </label>
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-xs text-zinc-500 uppercase tracking-widest mb-2 block">
+            Commit Type
+          </label>
+          <span className="text-xs font-mono text-emerald-400">
+            {categories.join(" + ")}
+          </span>
+        </div>
         <div className="flex flex-wrap gap-2">
-          {CATEGORIES.map((c) => (
-            <button
-              key={c}
-              onClick={() => setCategory(c)}
-              className={`px-3 py-1.5 text-xs font-mono rounded border transition-all
+          {CATEGORIES.map((c) => {
+            const isSelected = categories.includes(c);
+            return (
+              <button
+                key={c}
+                onClick={() => toggleCategory(c)}
+                className={`px-3 py-1.5 text-xs font-mono rounded border transition-all
                 ${
-                  category === c
+                  isSelected
                     ? "bg-emerald-400 border-emerald-400 text-black font-semibold"
                     : "border-zinc-800 text-zinc-500 hover:border-emerald-400 hover:text-emerald-400"
                 }`}
-            >
-              {c}
-            </button>
-          ))}
+              >
+                {c}
+
+                {isSelected && categories.length > 1 && (
+                  <span className="absolute -top-1.5 -right-1.5 bg-black border border-emerald-400 text-emerald-400 text-[9px] font-mono w-3.5 h-3.5 rounded-full flex items-center justify-center">
+                    {categories.indexOf(c) + 1}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
+        {categories.length > 1 && (
+          <p className="text-xs text-zinc-600 mt-2 font-mono">
+            → AI will blend these types into each commit variant
+          </p>
+        )}
       </div>
 
       {/* Topic + Scope */}

@@ -1,4 +1,3 @@
-// src/types/index.ts
 export type CommitCategory =
   | "feat"
   | "fix"
@@ -16,7 +15,7 @@ export interface CommitMessage {
 }
 
 export interface GeneratePayload {
-  category: CommitCategory;
+  category: string;
   topic: string;
   scope?: string;
   context?: string;
